@@ -1,0 +1,2901 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MaskPrompt: Redact Personal Data Before Pasting into ChatGPT</title>
+  <meta name="description" content="Redact Aadhaar, PAN, GSTIN, patient IDs, phone numbers &amp; secrets locally in your browser before pasting into AI, then restore original values in the reply." />
+  <meta name="author" content="Shrijeet Singh" />
+  <link rel="canonical" href="https://shrijeetdev.github.io/maskprompt/" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="MaskPrompt: Redact Personal Data Before Pasting into ChatGPT" />
+  <meta property="og:description" content="Mask client, patient, and customer PII locally with consistent placeholders before using ChatGPT, Claude, or Gemini—then restore the real values in one click." />
+  <meta property="og:url" content="https://shrijeetdev.github.io/maskprompt/" />
+  <meta property="og:site_name" content="MaskPrompt" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="MaskPrompt: Redact Personal Data Before Pasting into ChatGPT" />
+  <meta name="twitter:description" content="100% browser-based PII masking and restoration for lawyers, doctors, CAs, HR, and developers." />
+
+  <!-- Inline SVG Shield Favicon -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230D1117'/%3E%3Cpath d='M16 4L6 8.5v7.2c0 6.3 4.3 12.1 10 13.8 5.7-1.7 10-7.5 10-13.8V8.5L16 4z' fill='none' stroke='%233FB950' stroke-width='2.4'/%3E%3Cpath d='M11.5 16.2l3 3 6-6.2' fill='none' stroke='%2315E0ED' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E" />
+
+  <!-- Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "MaskPrompt",
+    "url": "https://shrijeetdev.github.io/maskprompt/",
+    "codeRepository": "https://github.com/shrijeetdev/maskprompt",
+    "applicationCategory": "SecurityApplication",
+    "operatingSystem": "Web Browser",
+    "description": "Local browser-based tool to redact Indian and global personal identifiable information (Aadhaar, PAN, GSTIN, medical IDs, financial data, credentials) into consistent placeholders before pasting into AI tools, and restore original values in AI responses.",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "author": {
+      "@type": "Person",
+      "name": "Shrijeet Singh",
+      "url": "https://shrijeetsingh.com"
+    }
+  }
+  </script>
+
+  <style>
+    :root {
+      --bg: #0D1117;
+      --surface: #161B22;
+      --surface-elevated: #1C2129;
+      --border: #30363D;
+      --text: #E6EDF3;
+      --muted: #8B949E;
+      --accent: #3FB950;
+      --accent-soft: rgba(63, 185, 80, 0.14);
+      --accent2: #15E0ED;
+      --accent2-soft: rgba(21, 224, 237, 0.13);
+      --danger: #F85149;
+      --danger-soft: rgba(248, 81, 73, 0.14);
+      --warn: #D29922;
+      --warn-soft: rgba(210, 153, 34, 0.15);
+      --radius: 12px;
+      --radius-sm: 8px;
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+      --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+    }
+
+    @media (prefers-color-scheme: light) {
+      :root {
+        --bg: #F6F8FA;
+        --surface: #FFFFFF;
+        --surface-elevated: #F0F3F6;
+        --border: #D0D7DE;
+        --text: #1F2328;
+        --muted: #59636E;
+        --accent: #1A7F37;
+        --accent-soft: rgba(26, 127, 55, 0.12);
+        --accent2: #0969DA;
+        --accent2-soft: rgba(9, 105, 218, 0.12);
+        --danger: #CF222E;
+        --danger-soft: rgba(207, 34, 46, 0.12);
+        --warn: #9A6700;
+        --warn-soft: rgba(154, 103, 0, 0.13);
+      }
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html {
+        scroll-behavior: auto;
+      }
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+
+    body {
+      margin: 0;
+      font-family: var(--font-sans);
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.55;
+      font-size: 15px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    a {
+      color: var(--accent2);
+      text-decoration: none;
+    }
+    a:hover, a:focus-visible {
+      text-decoration: underline;
+    }
+
+    :focus-visible {
+      outline: 2px solid var(--accent2);
+      outline-offset: 2px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+
+    /* Header */
+    .site-header {
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      padding: 20px 0;
+    }
+
+    .header-inner {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .brand-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      max-width: 780px;
+    }
+
+    .brand-top {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .brand-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 0;
+      font-size: 1.45rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--text);
+    }
+
+    .brand-logo {
+      width: 28px;
+      height: 28px;
+      flex-shrink: 0;
+    }
+
+    .local-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--accent);
+      background: var(--accent-soft);
+      border: 1px solid rgba(63, 185, 80, 0.35);
+      padding: 3px 10px;
+      border-radius: 999px;
+    }
+
+    .local-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+
+    .brand-subtitle {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.98rem;
+    }
+
+    .github-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--surface-elevated);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 8px 14px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: border-color 0.15s ease, background 0.15s ease;
+      white-space: nowrap;
+    }
+    .github-btn:hover {
+      border-color: var(--accent2);
+      text-decoration: none;
+    }
+
+    /* Main Workspace */
+    main {
+      padding: 24px 0 48px;
+    }
+
+    .workspace-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    /* Step Navigation Bar */
+    .step-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface-elevated);
+    }
+
+    .step-tabs {
+      display: inline-flex;
+      background: var(--bg);
+      padding: 4px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      gap: 4px;
+    }
+
+    .step-tab {
+      appearance: none;
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      font-family: inherit;
+      font-size: 0.9rem;
+      font-weight: 600;
+      padding: 7px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: background 0.15s ease, color 0.15s ease;
+    }
+
+    .step-tab:hover {
+      color: var(--text);
+    }
+
+    .step-tab[aria-selected="true"] {
+      background: var(--surface);
+      color: var(--text);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+    }
+
+    .step-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 20px;
+      height: 20px;
+      padding: 0 6px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+
+    .shortcut-hints {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    kbd {
+      font-family: var(--font-mono);
+      font-size: 0.74rem;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+
+    /* Profile & Samples Bar */
+    .toolbar-section {
+      padding: 16px 18px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .toolbar-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .control-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .control-label {
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .preset-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .preset-btn {
+      appearance: none;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--muted);
+      font-family: inherit;
+      font-size: 0.84rem;
+      font-weight: 600;
+      padding: 6px 12px;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .preset-btn:hover {
+      border-color: var(--text);
+      color: var(--text);
+    }
+
+    .preset-btn[aria-pressed="true"] {
+      background: var(--accent2-soft);
+      border-color: var(--accent2);
+      color: var(--accent2);
+    }
+
+    .btn {
+      appearance: none;
+      border: 1px solid var(--border);
+      background: var(--surface-elevated);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 0.85rem;
+      font-weight: 600;
+      padding: 7px 13px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: border-color 0.15s ease, background 0.15s ease, transform 0.05s ease;
+    }
+
+    .btn:hover:not(:disabled) {
+      border-color: var(--accent2);
+    }
+
+    .btn:active:not(:disabled) {
+      transform: translateY(1px);
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #0D1117;
+    }
+
+    @media (prefers-color-scheme: light) {
+      .btn-primary {
+        color: #FFFFFF;
+      }
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      filter: brightness(1.06);
+      border-color: var(--accent);
+    }
+
+    .btn-sm {
+      padding: 4px 10px;
+      font-size: 0.8rem;
+    }
+
+    .btn-danger-outline {
+      color: var(--danger);
+      border-color: rgba(248, 81, 73, 0.4);
+    }
+    .btn-danger-outline:hover:not(:disabled) {
+      border-color: var(--danger);
+      background: var(--danger-soft);
+    }
+
+    /* Detector Configuration Drawer/Grid */
+    .detectors-box {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+    }
+
+    .detectors-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .detector-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(195px, 1fr));
+      gap: 8px;
+    }
+
+    .detector-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      padding: 6px 9px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      font-size: 0.82rem;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .detector-item:hover {
+      border-color: var(--accent2);
+    }
+
+    .detector-item-left {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      min-width: 0;
+    }
+
+    .detector-item input[type="checkbox"] {
+      accent-color: var(--accent);
+      width: 15px;
+      height: 15px;
+      margin: 0;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .detector-name {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .heuristic-tag {
+      font-size: 0.66rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      padding: 1px 5px;
+      border-radius: 4px;
+      background: var(--warn-soft);
+      color: var(--warn);
+      flex-shrink: 0;
+    }
+
+    .detector-count {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--muted);
+      background: var(--bg);
+      padding: 1px 6px;
+      border-radius: 999px;
+      flex-shrink: 0;
+    }
+
+    .detector-count.has-hits {
+      color: var(--accent);
+      background: var(--accent-soft);
+      font-weight: 700;
+    }
+
+    /* Custom Blocklist Row */
+    .custom-words-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid var(--border);
+    }
+
+    .text-input {
+      flex: 1;
+      min-width: 240px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 0.86rem;
+      padding: 7px 11px;
+      border-radius: var(--radius-sm);
+    }
+
+    .text-input::placeholder {
+      color: var(--muted);
+    }
+
+    /* Stats Strip */
+    .stats-strip {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+      padding: 10px 18px;
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      font-size: 0.83rem;
+    }
+
+    .stats-metrics {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .stat-item strong {
+      font-family: var(--font-mono);
+      color: var(--accent2);
+    }
+
+    .stat-item.warn strong {
+      color: var(--warn);
+    }
+
+    /* Editor & Preview Split Grid */
+    .editor-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+    }
+
+    @media (max-width: 860px) {
+      .editor-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .pane {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .pane:first-child {
+      border-right: 1px solid var(--border);
+    }
+
+    @media (max-width: 860px) {
+      .pane:first-child {
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+      }
+    }
+
+    .pane-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 10px 16px;
+      background: var(--surface-elevated);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .pane-title {
+      font-size: 0.86rem;
+      font-weight: 700;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .pane-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .dropzone-wrapper {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+    }
+
+    .dropzone-wrapper.drag-over::after {
+      content: "Drop .txt, .md, .csv, .json, or .log file here";
+      position: absolute;
+      inset: 8px;
+      background: rgba(13, 17, 23, 0.9);
+      border: 2px dashed var(--accent2);
+      border-radius: var(--radius-sm);
+      color: var(--accent2);
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      z-index: 5;
+    }
+
+    textarea.code-area {
+      width: 100%;
+      min-height: 310px;
+      flex: 1;
+      resize: vertical;
+      border: none;
+      background: var(--surface);
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 0.86rem;
+      line-height: 1.6;
+      padding: 16px;
+      margin: 0;
+    }
+
+    textarea.code-area:focus {
+      outline: none;
+      box-shadow: inset 0 0 0 2px var(--accent2);
+    }
+
+    /* Interactive Highlight Surface */
+    .highlight-surface {
+      min-height: 310px;
+      max-height: 520px;
+      overflow-y: auto;
+      padding: 16px;
+      font-family: var(--font-mono);
+      font-size: 0.86rem;
+      line-height: 1.65;
+      white-space: pre-wrap;
+      word-break: break-word;
+      background: var(--surface);
+    }
+
+    .empty-hint {
+      color: var(--muted);
+      font-family: var(--font-sans);
+      font-size: 0.9rem;
+    }
+
+    .pii-mark {
+      display: inline;
+      padding: 1px 5px;
+      margin: 0 1px;
+      border-radius: 5px;
+      font-family: inherit;
+      font-size: inherit;
+      line-height: inherit;
+      cursor: pointer;
+      border: 1px solid var(--accent);
+      background: var(--accent-soft);
+      color: var(--text);
+      transition: all 0.12s ease;
+    }
+
+    .pii-mark:hover {
+      border-color: var(--accent2);
+      background: var(--accent2-soft);
+    }
+
+    .pii-mark .token-tag {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--accent);
+      margin-left: 4px;
+    }
+
+    .pii-mark.suppressed {
+      border-style: dashed;
+      border-color: var(--muted);
+      background: transparent;
+      color: var(--muted);
+      text-decoration: line-through;
+    }
+
+    .pii-mark.suppressed .token-tag {
+      color: var(--muted);
+    }
+
+    /* Output & Diff Tabs inside Right Pane */
+    .sub-tabs {
+      display: inline-flex;
+      gap: 4px;
+      background: var(--bg);
+      padding: 3px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+    }
+
+    .sub-tab {
+      appearance: none;
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      font-family: inherit;
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 4px 9px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .sub-tab[aria-pressed="true"] {
+      background: var(--surface);
+      color: var(--text);
+    }
+
+    /* Diff View */
+    .diff-container {
+      min-height: 310px;
+      max-height: 520px;
+      overflow-y: auto;
+      padding: 14px 16px;
+      font-family: var(--font-mono);
+      font-size: 0.83rem;
+      line-height: 1.6;
+      background: var(--surface);
+    }
+
+    .diff-line {
+      display: grid;
+      grid-template-columns: 36px 1fr;
+      gap: 8px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .diff-line.changed {
+      background: var(--accent-soft);
+    }
+
+    .diff-ln {
+      color: var(--muted);
+      user-select: none;
+      text-align: right;
+    }
+
+    .diff-del {
+      background: var(--danger-soft);
+      color: var(--danger);
+      text-decoration: line-through;
+      padding: 0 3px;
+      border-radius: 3px;
+    }
+
+    .diff-ins {
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-weight: 700;
+      padding: 0 3px;
+      border-radius: 3px;
+    }
+
+    /* Mapping Vault & Step 2 Restore */
+    .mapping-bar {
+      padding: 14px 18px;
+      border-top: 1px solid var(--border);
+      background: var(--surface-elevated);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .vault-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .mapping-table-wrap {
+      max-height: 220px;
+      overflow-y: auto;
+      border-top: 1px solid var(--border);
+    }
+
+    table.map-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.82rem;
+    }
+
+    table.map-table th,
+    table.map-table td {
+      text-align: left;
+      padding: 8px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    table.map-table th {
+      background: var(--bg);
+      color: var(--muted);
+      font-weight: 600;
+      position: sticky;
+      top: 0;
+    }
+
+    table.map-table td.mono {
+      font-family: var(--font-mono);
+    }
+
+    .panel-credit {
+      padding: 10px 18px;
+      border-top: 1px solid var(--border);
+      background: var(--bg);
+      font-size: 0.78rem;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    /* Modal Dialog for AES-GCM Passphrase */
+    dialog.crypto-dialog {
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 22px;
+      max-width: 440px;
+      width: calc(100% - 32px);
+      box-shadow: 0 18px 48px rgba(0, 0, 0, 0.55);
+    }
+
+    dialog.crypto-dialog::backdrop {
+      background: rgba(0, 0, 0, 0.65);
+    }
+
+    .dialog-title {
+      margin: 0 0 8px;
+      font-size: 1.1rem;
+    }
+
+    .dialog-desc {
+      margin: 0 0 14px;
+      font-size: 0.88rem;
+      color: var(--muted);
+    }
+
+    .dialog-field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 14px;
+    }
+
+    .dialog-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    /* Toast Notification */
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: var(--surface-elevated);
+      color: var(--text);
+      border: 1px solid var(--accent);
+      border-radius: var(--radius-sm);
+      padding: 10px 16px;
+      font-size: 0.86rem;
+      font-weight: 600;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+      z-index: 100;
+      opacity: 0;
+      transform: translateY(8px);
+      pointer-events: none;
+      transition: opacity 0.18s ease, transform 0.18s ease;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Informational Sections Below Tool */
+    .info-section {
+      margin-top: 44px;
+    }
+
+    .section-heading {
+      font-size: 1.3rem;
+      font-weight: 700;
+      margin: 0 0 16px;
+      letter-spacing: -0.01em;
+    }
+
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 16px;
+    }
+
+    .info-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px;
+    }
+
+    .info-card h3 {
+      margin: 0 0 8px;
+      font-size: 1.02rem;
+      color: var(--accent2);
+    }
+
+    .info-card p {
+      margin: 0;
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+
+    .steps-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 16px;
+    }
+
+    .step-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .step-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-weight: 700;
+      font-size: 0.86rem;
+    }
+
+    .step-card h3 {
+      margin: 0;
+      font-size: 1rem;
+    }
+
+    .step-card p {
+      margin: 0;
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+
+    /* FAQ Accordion */
+    .faq-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    details.faq-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 18px;
+    }
+
+    details.faq-item summary {
+      font-weight: 600;
+      font-size: 0.96rem;
+      cursor: pointer;
+      list-style: none;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    details.faq-item summary::-webkit-details-marker {
+      display: none;
+    }
+
+    details.faq-item summary::after {
+      content: "+";
+      font-family: var(--font-mono);
+      font-size: 1.1rem;
+      color: var(--accent2);
+    }
+
+    details.faq-item[open] summary::after {
+      content: "−";
+    }
+
+    details.faq-item p {
+      margin: 12px 0 0;
+      font-size: 0.92rem;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    /* Footer */
+    .site-footer {
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+      padding: 24px 0;
+      margin-top: 48px;
+      font-size: 0.88rem;
+      color: var(--muted);
+    }
+
+    .footer-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 14px;
+    }
+
+    .footer-links {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      flex-wrap: wrap;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    @media (max-width: 480px) {
+      .container {
+        padding: 0 12px;
+      }
+      .brand-title {
+        font-size: 1.25rem;
+      }
+      .step-bar, .toolbar-section, .mapping-bar {
+        padding: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <div class="brand-group">
+        <div class="brand-top">
+          <h1 class="brand-title">
+            <svg class="brand-logo" viewBox="0 0 32 32" aria-hidden="true">
+              <rect width="32" height="32" rx="8" fill="#161B22" stroke="#30363D" />
+              <path d="M16 4.5L6.5 8.8v6.9c0 6 4.1 11.6 9.5 13.3 5.4-1.7 9.5-7.3 9.5-13.3V8.8L16 4.5z" fill="none" stroke="#3FB950" stroke-width="2.2" />
+              <path d="M11.5 16.2l3 3 6-6.2" fill="none" stroke="#15E0ED" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+            MaskPrompt
+          </h1>
+          <span class="local-pill" title="Zero network requests. All regex, checksums, and encryption execute inside your browser.">
+            <span class="local-dot" aria-hidden="true"></span>
+            Runs 100% in your browser
+          </span>
+        </div>
+        <p class="brand-subtitle">Mask client and patient data before you paste into ChatGPT, then restore it</p>
+      </div>
+
+      <a class="github-btn" href="https://github.com/shrijeetdev/maskprompt" target="_blank" rel="noopener noreferrer" aria-label="Star MaskPrompt on GitHub">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+          <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z" />
+        </svg>
+        Star on GitHub
+      </a>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="workspace-card" aria-label="MaskPrompt Redaction and Restoration Workspace">
+      <!-- Top Step Switcher -->
+      <div class="step-bar">
+        <div class="step-tabs" role="tablist" aria-label="Workflow Steps">
+          <button type="button" class="step-tab" id="tab-step-1" role="tab" aria-selected="true" aria-controls="panel-step-1">
+            Step 1: Mask Sensitive Data
+            <span class="step-badge" id="active-token-badge">0</span>
+          </button>
+          <button type="button" class="step-tab" id="tab-step-2" role="tab" aria-selected="false" aria-controls="panel-step-2">
+            Step 2: Restore AI Reply
+            <span class="step-badge" id="vault-size-badge">0 keys</span>
+          </button>
+        </div>
+
+        <div class="shortcut-hints" aria-label="Keyboard shortcuts">
+          <span><kbd>Alt</kbd>+<kbd>1</kbd> / <kbd>2</kbd> Switch step</span>
+          <span><kbd>Ctrl/⌘</kbd>+<kbd>Shift</kbd>+<kbd>C</kbd> Copy output</span>
+        </div>
+      </div>
+
+      <!-- STEP 1 PANEL: MASK -->
+      <div id="panel-step-1" role="tabpanel" aria-labelledby="tab-step-1">
+        <div class="toolbar-section">
+          <div class="toolbar-row">
+            <div class="control-group" role="group" aria-label="Profile Presets">
+              <span class="control-label">Profile:</span>
+              <div class="preset-pills" id="preset-buttons">
+                <button type="button" class="preset-btn" data-preset="legal" aria-pressed="true">Legal</button>
+                <button type="button" class="preset-btn" data-preset="medical" aria-pressed="false">Medical</button>
+                <button type="button" class="preset-btn" data-preset="hr_finance" aria-pressed="false">HR / Finance</button>
+                <button type="button" class="preset-btn" data-preset="developer" aria-pressed="false">Developer Logs</button>
+                <button type="button" class="preset-btn" data-preset="custom" aria-pressed="false">Custom (All)</button>
+              </div>
+            </div>
+
+            <div class="control-group" role="group" aria-label="Load Sample Data">
+              <span class="control-label">Try a sample:</span>
+              <button type="button" class="btn btn-sm" data-sample="legal">Legal Brief</button>
+              <button type="button" class="btn btn-sm" data-sample="medical">Clinical Note</button>
+              <button type="button" class="btn btn-sm" data-sample="hr_finance">Payroll / KYC</button>
+              <button type="button" class="btn btn-sm" data-sample="developer">App Log</button>
+            </div>
+          </div>
+
+          <!-- Detector Toggles & Custom Terms -->
+          <div class="detectors-box">
+            <div class="detectors-header">
+              <span class="control-label">Active Detectors (click any highlighted pill below to toggle individual matches)</span>
+              <div class="control-group">
+                <button type="button" class="btn btn-sm" id="btn-select-all-detectors">Enable All</button>
+                <button type="button" class="btn btn-sm" id="btn-clear-detectors">Disable All</button>
+              </div>
+            </div>
+            <div class="detector-grid" id="detector-grid" aria-label="PII Detector Toggles"></div>
+
+            <div class="custom-words-row">
+              <label for="custom-terms-input" class="control-label">Custom Terms:</label>
+              <input
+                type="text"
+                id="custom-terms-input"
+                class="text-input"
+                placeholder="Type names, matter IDs, company names separated by commas (e.g. Acme Corp, SLP 4412/2026, Rajesh Sharma)"
+                aria-label="Custom words or phrases to always mask"
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- Live Stats Strip -->
+        <div class="stats-strip" aria-live="polite">
+          <div class="stats-metrics">
+            <span class="stat-item">Masked items: <strong id="stat-masked-count">0</strong></span>
+            <span class="stat-item">Unique tokens: <strong id="stat-unique-count">0</strong></span>
+            <span class="stat-item warn">Suppressed by click: <strong id="stat-suppressed-count">0</strong></span>
+            <span class="stat-item">Characters: <strong id="stat-char-count">0</strong></span>
+          </div>
+          <div class="control-group">
+            <button type="button" class="btn btn-sm" id="btn-reset-suppressed">Restore Suppressed Matches</button>
+          </div>
+        </div>
+
+        <!-- Split Input / Output Grid -->
+        <div class="editor-grid">
+          <!-- Left Pane: Raw Input -->
+          <div class="pane">
+            <div class="pane-header">
+              <h2 class="pane-title">1. Original Sensitive Text</h2>
+              <div class="pane-actions">
+                <input type="file" id="file-upload-input" accept=".txt,.md,.csv,.json,.log,text/plain" class="hidden" aria-label="Upload text file" />
+                <button type="button" class="btn btn-sm" id="btn-upload-file">Upload File</button>
+                <button type="button" class="btn btn-sm btn-danger-outline" id="btn-clear-input">Clear</button>
+              </div>
+            </div>
+            <div class="dropzone-wrapper" id="input-dropzone">
+              <textarea
+                id="raw-input"
+                class="code-area"
+                placeholder="Paste your legal draft, discharge summary, CA audit note, employee record, or server log here — or drag &amp; drop a .txt, .md, .csv, .json, or .log file..."
+                aria-label="Original text containing sensitive personal data"
+                spellcheck="false"
+              ></textarea>
+            </div>
+          </div>
+
+          <!-- Right Pane: Interactive Highlight / Masked Output / Diff -->
+          <div class="pane">
+            <div class="pane-header">
+              <div class="sub-tabs" role="group" aria-label="Output view mode">
+                <button type="button" class="sub-tab" id="view-tab-interactive" aria-pressed="true">Interactive Preview</button>
+                <button type="button" class="sub-tab" id="view-tab-clean" aria-pressed="false">Clean Masked Text</button>
+                <button type="button" class="sub-tab" id="view-tab-diff" aria-pressed="false">Side-by-Side Diff</button>
+              </div>
+              <div class="pane-actions">
+                <button type="button" class="btn btn-primary btn-sm" id="btn-copy-masked">Copy Masked Prompt</button>
+              </div>
+            </div>
+
+            <div id="interactive-preview" class="highlight-surface" aria-label="Interactive highlighted preview. Click any badge to toggle redaction.">
+              <span class="empty-hint">Detected sensitive items will appear highlighted here with consistent placeholders like [AADHAAR_1] or [PHONE_1]. Click any highlighted pill to keep or redact it.</span>
+            </div>
+
+            <textarea
+              id="clean-masked-output"
+              class="code-area hidden"
+              readonly
+              aria-label="Clean masked text ready to paste into AI"
+            ></textarea>
+
+            <div id="diff-preview" class="diff-container hidden" aria-label="Line-by-line diff of redactions"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 2 PANEL: RESTORE -->
+      <div id="panel-step-2" class="hidden" role="tabpanel" aria-labelledby="tab-step-2">
+        <div class="stats-strip">
+          <div class="stats-metrics">
+            <span class="stat-item">Active vault keys: <strong id="restore-vault-count">0</strong></span>
+            <span class="stat-item">Placeholders restored in reply: <strong id="restore-hit-count">0</strong></span>
+            <span class="stat-item warn">Unknown placeholders: <strong id="restore-unknown-count">0</strong></span>
+          </div>
+          <div class="control-group">
+            <button type="button" class="btn btn-sm" id="btn-load-sample-reply">Insert Sample AI Reply</button>
+          </div>
+        </div>
+
+        <div class="editor-grid">
+          <div class="pane">
+            <div class="pane-header">
+              <h2 class="pane-title">1. Paste AI Response (with Placeholders)</h2>
+              <div class="pane-actions">
+                <button type="button" class="btn btn-sm btn-danger-outline" id="btn-clear-ai-reply">Clear</button>
+              </div>
+            </div>
+            <textarea
+              id="ai-reply-input"
+              class="code-area"
+              placeholder="Paste the response from ChatGPT, Claude, or Gemini containing tokens like [PERSON_1], [AADHAAR_1], [CASE_1], etc..."
+              aria-label="AI response containing placeholders"
+              spellcheck="false"
+            ></textarea>
+          </div>
+
+          <div class="pane">
+            <div class="pane-header">
+              <h2 class="pane-title">2. Restored Original Output</h2>
+              <div class="pane-actions">
+                <button type="button" class="btn btn-primary btn-sm" id="btn-copy-restored">Copy Restored Text</button>
+              </div>
+            </div>
+            <textarea
+              id="restored-output"
+              class="code-area"
+              readonly
+              placeholder="Your AI reply with real names, IDs, and numbers restored will appear here automatically..."
+              aria-label="Restored output with original values"
+            ></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- Encrypted Mapping Vault Bar (Shared across Step 1 & Step 2) -->
+      <div class="mapping-bar">
+        <div class="control-group">
+          <span class="control-label">Session Vault:</span>
+          <span style="font-size: 0.84rem; color: var(--muted);">Stored in RAM only. Export encrypted JSON to restore later.</span>
+        </div>
+        <div class="vault-controls">
+          <button type="button" class="btn btn-sm" id="btn-toggle-map-table">Show Mapping Table (0)</button>
+          <button type="button" class="btn btn-sm" id="btn-export-vault">Export Encrypted (.json)</button>
+          <input type="file" id="vault-import-input" accept=".json,application/json" class="hidden" aria-label="Import encrypted mapping JSON" />
+          <button type="button" class="btn btn-sm" id="btn-import-vault">Import Encrypted (.json)</button>
+          <button type="button" class="btn btn-sm btn-danger-outline" id="btn-wipe-vault">Wipe Session</button>
+        </div>
+      </div>
+
+      <div id="mapping-table-container" class="mapping-table-wrap hidden">
+        <table class="map-table" aria-label="Placeholder to original value mapping table">
+          <thead>
+            <tr>
+              <th>Placeholder Token</th>
+              <th>Category</th>
+              <th>Original Value (In-Memory Only)</th>
+            </tr>
+          </thead>
+          <tbody id="mapping-table-body"></tbody>
+        </table>
+      </div>
+
+      <div class="panel-credit">
+        <span>MaskPrompt by Shrijeet Singh &middot; <a href="https://shrijeetsingh.com" target="_blank" rel="noopener noreferrer">shrijeetsingh.com</a></span>
+        <span>Zero server uploads &middot; WebCrypto AES-256-GCM vault</span>
+      </div>
+    </section>
+
+    <!-- WHO IT IS FOR -->
+    <section class="info-section" aria-labelledby="heading-who">
+      <h2 class="section-heading" id="heading-who">Who it is for</h2>
+      <div class="cards-grid">
+        <article class="info-card">
+          <h3>Lawyers &amp; Legal Teams</h3>
+          <p>Sanitize pleadings, client notices, FIR extracts, witness statements, and arbitration briefs—stripping Aadhaar, PAN, EPIC, vehicle numbers, and client names before drafting summaries or arguments with AI.</p>
+        </article>
+        <article class="info-card">
+          <h3>Doctors &amp; Clinics</h3>
+          <p>De-identify discharge summaries, lab reports, ABHA 14-digit health IDs, UHID/MRN numbers, phone numbers, and patient honorifics before checking differential notes or patient instructions.</p>
+        </article>
+        <article class="info-card">
+          <h3>HR &amp; Chartered Accountants</h3>
+          <p>Mask GSTIN, PAN, IFSC, bank account numbers, UPI handles, salary annexures, and employee IDs before using LLMs to structure tax memos, compliance checklists, or HR policies.</p>
+        </article>
+        <article class="info-card">
+          <h3>Developers &amp; SREs</h3>
+          <p>Scrub JWTs, API keys, signed URLs with query tokens, IPv4/IPv6 addresses, and customer emails from production stack traces and JSON payloads before debugging with an AI assistant.</p>
+        </article>
+      </div>
+    </section>
+
+    <!-- HOW IT WORKS -->
+    <section class="info-section" aria-labelledby="heading-how">
+      <h2 class="section-heading" id="heading-how">How it works</h2>
+      <div class="steps-grid">
+        <article class="step-card">
+          <span class="step-num">1</span>
+          <h3>Detect &amp; Validate Locally</h3>
+          <p>Paste text or drop a file. MaskPrompt runs regex patterns paired with mathematical checksums (Verhoeff for Aadhaar, Luhn for cards, mod-36 for GSTIN) entirely inside browser memory.</p>
+        </article>
+        <article class="step-card">
+          <span class="step-num">2</span>
+          <h3>Consistent Token Substitution</h3>
+          <p>Identical values always receive the same placeholder (such as <code>[AADHAAR_1]</code> or <code>[PERSON_1]</code>), preserving relational context so ChatGPT, Claude, or Gemini can reason accurately.</p>
+        </article>
+        <article class="step-card">
+          <span class="step-num">3</span>
+          <h3>One-Click Restoration</h3>
+          <p>Paste the AI reply into Step 2 to re-hydrate the original names and IDs. Need to close your tab? Export the mapping encrypted with AES-256-GCM and a passphrase you choose.</p>
+        </article>
+      </div>
+    </section>
+
+    <!-- FAQ -->
+    <section class="info-section" aria-labelledby="heading-faq">
+      <h2 class="section-heading" id="heading-faq">Frequently Asked Questions</h2>
+      <div class="faq-list">
+        <details class="faq-item" open>
+          <summary>Is my text or mapping uploaded to any server?</summary>
+          <p>No. MaskPrompt is a single self-contained HTML file with zero external scripts, zero analytics, and zero network calls. All detection, diffing, and AES-GCM encryption execute locally in your browser's RAM and vanish when you close or refresh the tab unless you explicitly download an encrypted mapping file.</p>
+        </details>
+
+        <details class="faq-item">
+          <summary>Does using MaskPrompt make AI usage compliant with India's DPDP Act?</summary>
+          <p>It significantly reduces data exposure risk by stripping direct identifiers before data leaves your device, supporting data minimization practices under India's Digital Personal Data Protection (DPDP) Act, 2023. However, technical redaction alone does not constitute legal compliance or legal advice—you must still verify contractual data-processing terms, consent obligations, and indirect re-identification risks with your legal counsel.</p>
+        </details>
+
+        <details class="faq-item">
+          <summary>How does the Restore step work?</summary>
+          <p>When MaskPrompt masks your text in Step 1, it keeps an in-memory dictionary mapping each generated placeholder (for example, <code>[PAN_1]</code>) to its exact original string. In Step 2, MaskPrompt scans the AI's response for those placeholder tokens and replaces them with your original values locally.</p>
+        </details>
+
+        <details class="faq-item">
+          <summary>What can MaskPrompt not detect automatically?</summary>
+          <p>Unlabelled free-form names without honorifics (e.g., "Rohan met Priya at the cafe"), rare contextual facts ("the only cardiologist in Ward 4"), or scanned text inside images cannot be reliably caught by deterministic rules. Always add known client, patient, or company names to the Custom Terms box and inspect the Interactive Preview before copying.</p>
+        </details>
+
+        <details class="faq-item">
+          <summary>Can I use MaskPrompt completely offline?</summary>
+          <p>Yes. Save this page (File &rarr; Save Page As) or download <code>index.html</code> from the GitHub repository and open it directly in any modern browser on an air-gapped or offline machine. Every feature, including checksum validation and WebCrypto encryption, works without an internet connection.</p>
+        </details>
+
+        <details class="faq-item">
+          <summary>Is MaskPrompt free and open source?</summary>
+          <p>Yes. MaskPrompt is 100% free and open source under the MIT License, created by Shrijeet Singh. You can inspect the entire source code in a single file, audit every regular expression, or self-host it on your firm's internal intranet.</p>
+        </details>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <div>
+        Built by <a href="https://shrijeetsingh.com" target="_blank" rel="noopener noreferrer">Shrijeet Singh</a>
+      </div>
+      <div class="footer-links">
+        <a href="https://github.com/shrijeetdev" target="_blank" rel="noopener noreferrer">GitHub (github.com/shrijeetdev)</a>
+        <a href="https://github.com/shrijeetdev/maskprompt" target="_blank" rel="noopener noreferrer">Star on GitHub</a>
+        <a href="https://shrijeetdev.github.io/" target="_blank" rel="noopener noreferrer">More free tools</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Passphrase Dialog for AES-GCM Vault Export/Import -->
+  <dialog id="crypto-dialog" class="crypto-dialog" aria-labelledby="crypto-dialog-title">
+    <form method="dialog" id="crypto-dialog-form">
+      <h3 class="dialog-title" id="crypto-dialog-title">Encrypt Mapping Vault</h3>
+      <p class="dialog-desc" id="crypto-dialog-desc">Enter a strong passphrase. Your mapping will be encrypted locally using PBKDF2-SHA256 (250,000 iterations) and AES-256-GCM.</p>
+      <div class="dialog-field">
+        <label for="vault-passphrase" class="control-label">Passphrase</label>
+        <input type="password" id="vault-passphrase" class="text-input" autocomplete="off" required minlength="6" placeholder="Minimum 6 characters" />
+      </div>
+      <div class="dialog-actions">
+        <button type="button" class="btn" id="btn-cancel-crypto">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="btn-confirm-crypto">Continue</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    (() => {
+      "use strict";
+
+      /* =========================================================================
+       * 1. CHECKSUM & VALIDATION ALGORITHMS (Verhoeff, Luhn, GSTIN Mod-36)
+       * ========================================================================= */
+
+      // Verhoeff algorithm tables for 12-digit Indian Aadhaar validation
+      const VERHOEFF_D = [
+        [0,1,2,3,4,5,6,7,8,9],
+        [1,2,3,4,0,6,7,8,9,5],
+        [2,3,4,0,1,7,8,9,5,6],
+        [3,4,0,1,2,8,9,5,6,7],
+        [4,0,1,2,3,9,5,6,7,8],
+        [5,9,8,7,6,0,4,3,2,1],
+        [6,5,9,8,7,1,0,4,3,2],
+        [7,6,5,9,8,2,1,0,4,3],
+        [8,7,6,5,9,3,2,1,0,4],
+        [9,8,7,6,5,4,3,2,1,0]
+      ];
+      const VERHOEFF_P = [
+        [0,1,2,3,4,5,6,7,8,9],
+        [1,5,7,6,2,8,3,0,9,4],
+        [5,8,0,3,7,9,6,1,4,2],
+        [8,9,1,6,0,4,3,5,2,7],
+        [9,4,5,3,1,2,6,8,7,0],
+        [4,2,8,6,5,7,3,9,0,1],
+        [2,7,9,3,8,0,6,4,1,5],
+        [7,0,4,6,9,1,3,2,5,8]
+      ];
+      const VERHOEFF_INV = [0,4,3,2,1,5,6,7,8,9];
+
+      function validateVerhoeff(numStr) {
+        const clean = numStr.replace(/[\s-]/g, "");
+        if (!/^[2-9]\d{11}$/.test(clean)) return false;
+        let c = 0;
+        const len = clean.length;
+        for (let i = 0; i < len; i++) {
+          const digit = clean.charCodeAt(len - 1 - i) - 48;
+          c = VERHOEFF_D[c][VERHOEFF_P[i % 8][digit]];
+        }
+        return c === 0;
+      }
+
+      // Runtime generator for valid-checksum fake Aadhaar numbers (for sample datasets)
+      function generateFakeValidAadhaar(seed11Digits) {
+        let base = seed11Digits.replace(/\D/g, "").slice(0, 11);
+        if (!/^[2-9]/.test(base)) base = "4" + base.slice(1);
+        while (base.length < 11) base += "7";
+        let c = 0;
+        for (let i = 0; i < 11; i++) {
+          const digit = base.charCodeAt(10 - i) - 48;
+          c = VERHOEFF_D[c][VERHOEFF_P[(i + 1) % 8][digit]];
+        }
+        const checkDigit = VERHOEFF_INV[c];
+        const full = base + String(checkDigit);
+        return `${full.slice(0, 4)} ${full.slice(4, 8)} ${full.slice(8, 12)}`;
+      }
+
+      // Luhn algorithm for credit/debit cards
+      function validateLuhn(numStr) {
+        const digits = numStr.replace(/[\s-]/g, "");
+        if (!/^\d{13,19}$/.test(digits)) return false;
+        if (/^(\d)\1+$/.test(digits)) return false;
+        let sum = 0;
+        let alt = false;
+        for (let i = digits.length - 1; i >= 0; i--) {
+          let n = digits.charCodeAt(i) - 48;
+          if (alt) {
+            n *= 2;
+            if (n > 9) n -= 9;
+          }
+          sum += n;
+          alt = !alt;
+        }
+        return sum % 10 === 0;
+      }
+
+      // Indian GSTIN checksum (base-36 weighted Luhn mod 36)
+      const GSTIN_CHARS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+      function validateGSTIN(gstin) {
+        const clean = gstin.toUpperCase();
+        if (!/^(0[1-9]|[1-2][0-9]|3[0-8]|97|99)[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/.test(clean)) {
+          return false;
+        }
+        let sum = 0;
+        for (let i = 0; i < 14; i++) {
+          const codePoint = GSTIN_CHARS.indexOf(clean[i]);
+          if (codePoint < 0) return false;
+          const factor = (i % 2 === 0) ? 1 : 2;
+          const product = codePoint * factor;
+          sum += Math.floor(product / 36) + (product % 36);
+        }
+        const checkCodePoint = (36 - (sum % 36)) % 36;
+        return clean[14] === GSTIN_CHARS[checkCodePoint];
+      }
+
+      // Runtime generator for valid-checksum fake GSTIN
+      function generateFakeValidGSTIN(prefix14) {
+        const clean = prefix14.toUpperCase().slice(0, 14);
+        let sum = 0;
+        for (let i = 0; i < 14; i++) {
+          const codePoint = GSTIN_CHARS.indexOf(clean[i]);
+          const factor = (i % 2 === 0) ? 1 : 2;
+          const product = codePoint * factor;
+          sum += Math.floor(product / 36) + (product % 36);
+        }
+        const checkCodePoint = (36 - (sum % 36)) % 36;
+        return clean + GSTIN_CHARS[checkCodePoint];
+      }
+
+      // IBAN mod-97 ISO 13616 check
+      function validateIBAN(iban) {
+        const clean = iban.replace(/\s+/g, "").toUpperCase();
+        if (!/^[A-Z]{2}\d{2}[A-Z0-9]{11,30}$/.test(clean)) return false;
+        const rearranged = clean.slice(4) + clean.slice(0, 4);
+        let remainder = 0;
+        for (let i = 0; i < rearranged.length; i++) {
+          const ch = rearranged[i];
+          const val = ch >= "A" && ch <= "Z" ? String(ch.charCodeAt(0) - 55) : ch;
+          for (let j = 0; j < val.length; j++) {
+            remainder = (remainder * 10 + (val.charCodeAt(j) - 48)) % 97;
+          }
+        }
+        return remainder === 1;
+      }
+
+      /* =========================================================================
+       * 2. DETECTOR DEFINITIONS & PROFILE PRESETS
+       * ========================================================================= */
+
+      const DETECTORS = [
+        {
+          id: "aadhaar",
+          label: "Aadhaar (Verhoeff)",
+          tokenPrefix: "AADHAAR",
+          priority: 100,
+          regex: /\b[2-9]\d{3}[\s-]?\d{4}[\s-]?\d{4}\b/g,
+          validate: (m) => validateVerhoeff(m[0])
+        },
+        {
+          id: "gstin",
+          label: "GSTIN (Checksum)",
+          tokenPrefix: "GSTIN",
+          priority: 98,
+          regex: /\b(?:0[1-9]|[1-2][0-9]|3[0-8]|97|99)[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]\b/gi,
+          validate: (m) => validateGSTIN(m[0])
+        },
+        {
+          id: "pan",
+          label: "PAN Card",
+          tokenPrefix: "PAN",
+          priority: 95,
+          regex: /\b[A-Z]{3}[ABCFGHLJPTF][A-Z][0-9]{4}[A-Z]\b/g
+        },
+        {
+          id: "abha",
+          label: "ABHA Health ID",
+          tokenPrefix: "ABHA_ID",
+          priority: 94,
+          regex: /\b\d{2}-\d{4}-\d{4}-\d{4}\b|\b(?:ABHA|Health\s*ID)\s*[:#-]?\s*(\d{14})\b/gi,
+          extractGroup: 1
+        },
+        {
+          id: "uhid",
+          label: "UHID / MRN (Labelled)",
+          tokenPrefix: "UHID_MRN",
+          priority: 93,
+          regex: /\b(?:UHID|MRN|Patient\s*ID|IPD\s*No\.?|OPD\s*No\.?)\s*[:#-]?\s*([A-Z0-9][A-Z0-9\/-]{4,18})\b/gi,
+          extractGroup: 1
+        },
+        {
+          id: "credit_card",
+          label: "Credit/Debit Card (Luhn)",
+          tokenPrefix: "CARD",
+          priority: 92,
+          regex: /\b(?:\d{4}[\s-]?){3}\d{1,7}\b/g,
+          validate: (m) => validateLuhn(m[0])
+        },
+        {
+          id: "iban",
+          label: "IBAN (Mod-97)",
+          tokenPrefix: "IBAN",
+          priority: 91,
+          regex: /\b[A-Z]{2}\d{2}(?:\s?[A-Z0-9]){11,30}\b/g,
+          validate: (m) => validateIBAN(m[0])
+        },
+        {
+          id: "jwt",
+          label: "JWT Token",
+          tokenPrefix: "JWT",
+          priority: 90,
+          regex: /\beyJ[A-Za-z0-9_-]{8,}\.eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b/g
+        },
+        {
+          id: "api_key",
+          label: "API Keys & Secrets",
+          tokenPrefix: "SECRET",
+          priority: 89,
+          regex: /\b(?:sk-[a-zA-Z0-9_-]{20,}|ghp_[a-zA-Z0-9]{30,}|gho_[a-zA-Z0-9]{30,}|AKIA[0-9A-Z]{16}|AIza[0-9A-Za-z_-]{35}|xox[baprs]-[0-9A-Za-z-]{10,}|rzp_(?:live|test)_[0-9a-zA-Z]{14,}|Bearer\s+[A-Za-z0-9._~+/=-]{20,})\b/g
+        },
+        {
+          id: "url_token",
+          label: "URLs with Tokens",
+          tokenPrefix: "AUTH_URL",
+          priority: 88,
+          regex: /https?:\/\/[^\s"'<>]+[?&](?:token|key|api_key|apikey|secret|sig|signature|access_token|auth|password|X-Amz-Signature)=[^\s"'<>&#]+/gi
+        },
+        {
+          id: "email",
+          label: "Email Addresses",
+          tokenPrefix: "EMAIL",
+          priority: 86,
+          regex: /\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b/g
+        },
+        {
+          id: "upi",
+          label: "UPI ID (name@bank)",
+          tokenPrefix: "UPI",
+          priority: 85,
+          regex: /\b[a-zA-Z0-9._-]{2,64}@(?:okaxis|okicici|okhdfcbank|oksbi|ybl|ibl|axl|paytm|upi|apl|fbl|icici|sbi|hdfcbank|kotak|indus|federal|aubank|idbi|unionbank|pnb|bob|canara|cbin|dbs|hsbc|scb|citi|yesbank|rbl|airtel|jio|freecharge|mobikwik|amazonpay|slice|jupiteraxis|fam|naviaxis|ptaxis|pthdfc|ptsbi|ptyes)\b/gi
+        },
+        {
+          id: "ifsc",
+          label: "IFSC Code",
+          tokenPrefix: "IFSC",
+          priority: 84,
+          regex: /\b[A-Z]{4}0[A-Z0-9]{6}\b/g
+        },
+        {
+          id: "bank_account",
+          label: "Bank A/c (Contextual)",
+          tokenPrefix: "BANK_AC",
+          priority: 83,
+          regex: /\b(?:A\/c|Account|Acct|Acc\.?\s*No\.?|Bank\s*A\/c|Savings\s*No\.?|Current\s*No\.?)\s*(?:No\.?|Number|#|:|-)?\s*(\d{9,18})\b/gi,
+          extractGroup: 1
+        },
+        {
+          id: "passport",
+          label: "Indian Passport",
+          tokenPrefix: "PASSPORT",
+          priority: 82,
+          regex: /\b[A-PR-WY][1-9]\d\s?\d{4}[1-9]\b/g
+        },
+        {
+          id: "epic",
+          label: "Voter ID (EPIC)",
+          tokenPrefix: "VOTER_ID",
+          priority: 81,
+          regex: /\b[A-Z]{3}[0-9]{7}\b/g
+        },
+        {
+          id: "driving_licence",
+          label: "Driving Licence (IN)",
+          tokenPrefix: "DL_NO",
+          priority: 80,
+          regex: /\b(?:AN|AP|AR|AS|BR|CG|CH|DD|DL|DN|GA|GJ|HP|HR|JH|JK|KA|KL|LA|LD|MH|ML|MN|MP|MZ|NL|OD|OR|PB|PY|RJ|SK|TN|TR|TS|UK|UP|UT|WB)[-\s]?\d{2}[-\s]?(?:19|20)\d{2}[-\s]?\d{7}\b/g
+        },
+        {
+          id: "vehicle_reg",
+          label: "Vehicle Reg. Number",
+          tokenPrefix: "VEHICLE",
+          priority: 79,
+          regex: /\b(?:AN|AP|AR|AS|BR|CG|CH|DD|DL|DN|GA|GJ|HP|HR|JH|JK|KA|KL|LA|LD|MH|ML|MN|MP|MZ|NL|OD|OR|PB|PY|RJ|SK|TN|TR|TS|UK|UP|UT|WB)[-\s]?\d{1,2}[-\s]?[A-Z]{1,3}[-\s]?\d{4}\b/g
+        },
+        {
+          id: "mobile",
+          label: "Indian Mobile (+91)",
+          tokenPrefix: "PHONE",
+          priority: 78,
+          regex: /(?:(?:\+91|0091)[\s-]?)?[6-9]\d{4}[\s-]?\d{5}\b/g,
+          validate: (m) => {
+            const digits = m[0].replace(/\D/g, "");
+            return digits.length === 10 || (digits.length === 12 && digits.startsWith("91"));
+          }
+        },
+        {
+          id: "landline",
+          label: "Landline Number",
+          tokenPrefix: "LANDLINE",
+          priority: 76,
+          regex: /\b0\d{2,4}[\s-]\d{6,8}\b/g
+        },
+        {
+          id: "dob",
+          label: "Date of Birth (Labelled)",
+          tokenPrefix: "DOB",
+          priority: 75,
+          regex: /\b(?:DOB|D\.O\.B\.?|Date\s+of\s+Birth|Born\s+on)\s*[:#-]?\s*(\d{1,2}[\/\-.]\d{1,2}[\/\-.](?:19|20)\d{2}|\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+(?:19|20)\d{2})\b/gi,
+          extractGroup: 1
+        },
+        {
+          id: "pincode",
+          label: "PIN Code (Address Context)",
+          tokenPrefix: "PINCODE",
+          priority: 74,
+          regex: /(?:(?:PIN|Pincode|Postal|Address|Road|Marg|Nagar|Colony|Sector|Phase|Block|Vihar|Enclave|Extension|Dist|District|Taluka|Tehsil|Delhi|Mumbai|Bengaluru|Bangalore|Chennai|Kolkata|Hyderabad|Pune|Gurugram|Noida|Jaipur|Ahmedabad|Lucknow|Chandigarh)[^\n\d]{0,35})\b([1-9]\d{5})\b/gi,
+          extractGroup: 1
+        },
+        {
+          id: "ipv4",
+          label: "IPv4 Address",
+          tokenPrefix: "IPV4",
+          priority: 72,
+          regex: /\b(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\b/g
+        },
+        {
+          id: "ipv6",
+          label: "IPv6 Address",
+          tokenPrefix: "IPV6",
+          priority: 71,
+          regex: /\b(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}\b|\b(?:[0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}\b/g
+        },
+        {
+          id: "honorific_person",
+          label: "Honorific Names",
+          heuristic: true,
+          tokenPrefix: "PERSON",
+          priority: 65,
+          regex: /\b(?:Mr|Mrs|Ms|Miss|Dr|Prof|Adv|Justice|Hon'ble|Shri|Smt|Kumari|Capt|Col|Maj|Gen|Er|CA|CS)\.?\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,3})\b/g,
+          extractGroup: 1
+        }
+      ];
+
+      const PRESETS = {
+        legal: ["aadhaar", "pan", "gstin", "passport", "epic", "driving_licence", "vehicle_reg", "mobile", "landline", "email", "bank_account", "ifsc", "dob", "pincode", "honorific_person"],
+        medical: ["abha", "uhid", "aadhaar", "mobile", "landline", "email", "dob", "pincode", "honorific_person"],
+        hr_finance: ["aadhaar", "pan", "gstin", "bank_account", "ifsc", "upi", "credit_card", "iban", "mobile", "email", "dob", "pincode", "honorific_person"],
+        developer: ["jwt", "api_key", "url_token", "ipv4", "ipv6", "email", "mobile", "credit_card"],
+        custom: DETECTORS.map((d) => d.id)
+      };
+
+      /* =========================================================================
+       * 3. APPLICATION STATE
+       * ========================================================================= */
+
+      const state = {
+        activeStep: 1,
+        activePreset: "legal",
+        enabledDetectors: new Set(PRESETS.legal),
+        customTermsRaw: "",
+        rawText: "",
+        viewMode: "interactive", // "interactive" | "clean" | "diff"
+        suppressedKeys: new Set(), // Keys of "detectorId::normalizedValue" user clicked to keep visible
+        valueToToken: new Map(),   // "PREFIX::exactValue" -> "[PREFIX_N]"
+        tokenToValue: new Map(),   // "[PREFIX_N]" -> { value, category }
+        prefixCounters: new Map(), // "PREFIX" -> integer
+        currentMatches: [],
+        maskedText: "",
+        aiReplyText: "",
+        restoredText: "",
+        showMapTable: false
+      };
+
+      /* =========================================================================
+       * 4. DOM REFERENCES
+       * ========================================================================= */
+
+      const els = {
+        tabStep1: document.getElementById("tab-step-1"),
+        tabStep2: document.getElementById("tab-step-2"),
+        panelStep1: document.getElementById("panel-step-1"),
+        panelStep2: document.getElementById("panel-step-2"),
+        activeTokenBadge: document.getElementById("active-token-badge"),
+        vaultSizeBadge: document.getElementById("vault-size-badge"),
+
+        presetButtons: document.getElementById("preset-buttons"),
+        detectorGrid: document.getElementById("detector-grid"),
+        btnSelectAllDetectors: document.getElementById("btn-select-all-detectors"),
+        btnClearDetectors: document.getElementById("btn-clear-detectors"),
+        customTermsInput: document.getElementById("custom-terms-input"),
+
+        statMaskedCount: document.getElementById("stat-masked-count"),
+        statUniqueCount: document.getElementById("stat-unique-count"),
+        statSuppressedCount: document.getElementById("stat-suppressed-count"),
+        statCharCount: document.getElementById("stat-char-count"),
+        btnResetSuppressed: document.getElementById("btn-reset-suppressed"),
+
+        rawInput: document.getElementById("raw-input"),
+        inputDropzone: document.getElementById("input-dropzone"),
+        fileUploadInput: document.getElementById("file-upload-input"),
+        btnUploadFile: document.getElementById("btn-upload-file"),
+        btnClearInput: document.getElementById("btn-clear-input"),
+
+        viewTabInteractive: document.getElementById("view-tab-interactive"),
+        viewTabClean: document.getElementById("view-tab-clean"),
+        viewTabDiff: document.getElementById("view-tab-diff"),
+        interactivePreview: document.getElementById("interactive-preview"),
+        cleanMaskedOutput: document.getElementById("clean-masked-output"),
+        diffPreview: document.getElementById("diff-preview"),
+        btnCopyMasked: document.getElementById("btn-copy-masked"),
+
+        aiReplyInput: document.getElementById("ai-reply-input"),
+        restoredOutput: document.getElementById("restored-output"),
+        restoreVaultCount: document.getElementById("restore-vault-count"),
+        restoreHitCount: document.getElementById("restore-hit-count"),
+        restoreUnknownCount: document.getElementById("restore-unknown-count"),
+        btnClearAiReply: document.getElementById("btn-clear-ai-reply"),
+        btnCopyRestored: document.getElementById("btn-copy-restored"),
+        btnLoadSampleReply: document.getElementById("btn-load-sample-reply"),
+
+        btnToggleMapTable: document.getElementById("btn-toggle-map-table"),
+        mappingTableContainer: document.getElementById("mapping-table-container"),
+        mappingTableBody: document.getElementById("mapping-table-body"),
+        btnExportVault: document.getElementById("btn-export-vault"),
+        btnImportVault: document.getElementById("btn-import-vault"),
+        vaultImportInput: document.getElementById("vault-import-input"),
+        btnWipeVault: document.getElementById("btn-wipe-vault"),
+
+        cryptoDialog: document.getElementById("crypto-dialog"),
+        cryptoDialogForm: document.getElementById("crypto-dialog-form"),
+        cryptoDialogTitle: document.getElementById("crypto-dialog-title"),
+        cryptoDialogDesc: document.getElementById("crypto-dialog-desc"),
+        vaultPassphrase: document.getElementById("vault-passphrase"),
+        btnCancelCrypto: document.getElementById("btn-cancel-crypto"),
+
+        toast: document.getElementById("toast")
+      };
+
+      /* =========================================================================
+       * 5. CORE DETECTION & CONSISTENT TOKENIZATION ENGINE
+       * ========================================================================= */
+
+      function escapeRegex(str) {
+        return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      }
+
+      function getOrCreateToken(prefix, exactValue, categoryLabel) {
+        const lookupKey = `${prefix}::${exactValue}`;
+        if (state.valueToToken.has(lookupKey)) {
+          return state.valueToToken.get(lookupKey);
+        }
+        const nextNum = (state.prefixCounters.get(prefix) || 0) + 1;
+        state.prefixCounters.set(prefix, nextNum);
+        const token = `[${prefix}_${nextNum}]`;
+        state.valueToToken.set(lookupKey, token);
+        state.tokenToValue.set(token, { value: exactValue, category: categoryLabel });
+        return token;
+      }
+
+      function findCustomTermMatches(text) {
+        const rawTerms = state.customTermsRaw
+          .split(",")
+          .map((t) => t.trim())
+          .filter((t) => t.length > 0);
+
+        if (rawTerms.length === 0) return [];
+
+        // Sort longer terms first so multi-word phrases match before single words
+        const uniqueTerms = Array.from(new Set(rawTerms)).sort((a, b) => b.length - a.length);
+        const matches = [];
+
+        for (const term of uniqueTerms) {
+          const escaped = escapeRegex(term);
+          const startBoundary = /^\w/.test(term) ? "\\b" : "";
+          const endBoundary = /\w$/.test(term) ? "\\b" : "";
+          const rx = new RegExp(`${startBoundary}${escaped}${endBoundary}`, "gi");
+          let m;
+          while ((m = rx.exec(text)) !== null) {
+            if (m[0].length === 0) {
+              rx.lastIndex++;
+              continue;
+            }
+            matches.push({
+              start: m.index,
+              end: m.index + m[0].length,
+              value: m[0],
+              detectorId: "custom_term",
+              categoryLabel: "Custom Term",
+              tokenPrefix: "CUSTOM",
+              priority: 110
+            });
+          }
+        }
+        return matches;
+      }
+
+      function scanText(text) {
+        if (!text) return [];
+
+        const candidates = [];
+
+        // 1. Custom terms (highest priority)
+        candidates.push(...findCustomTermMatches(text));
+
+        // 2. Enabled built-in detectors
+        for (const det of DETECTORS) {
+          if (!state.enabledDetectors.has(det.id)) continue;
+          const rx = new RegExp(det.regex.source, det.regex.flags);
+          let m;
+          while ((m = rx.exec(text)) !== null) {
+            if (m[0].length === 0) {
+              rx.lastIndex++;
+              continue;
+            }
+            if (det.validate && !det.validate(m)) {
+              continue;
+            }
+
+            let matchedValue = m[0];
+            let start = m.index;
+            let end = m.index + m[0].length;
+
+            if (det.extractGroup && m[det.extractGroup]) {
+              const sub = m[det.extractGroup];
+              const subOffset = m[0].lastIndexOf(sub);
+              if (subOffset !== -1) {
+                matchedValue = sub;
+                start = m.index + subOffset;
+                end = start + sub.length;
+              }
+            }
+
+            candidates.push({
+              start,
+              end,
+              value: matchedValue,
+              detectorId: det.id,
+              categoryLabel: det.label,
+              tokenPrefix: det.tokenPrefix,
+              priority: det.priority
+            });
+          }
+        }
+
+        // Sort by start index ascending, then longer span first, then higher priority
+        candidates.sort((a, b) => {
+          if (a.start !== b.start) return a.start - b.start;
+          const lenDiff = (b.end - b.start) - (a.end - a.start);
+          if (lenDiff !== 0) return lenDiff;
+          return b.priority - a.priority;
+        });
+
+        // Resolve overlaps greedily
+        const resolved = [];
+        let cursor = 0;
+        for (const item of candidates) {
+          if (item.start >= cursor) {
+            resolved.push(item);
+            cursor = item.end;
+          }
+        }
+
+        return resolved;
+      }
+
+      /* =========================================================================
+       * 6. RENDERING PIPELINE (PREVIEW, CLEAN OUTPUT, DIFF, STATS, RESTORE)
+       * ========================================================================= */
+
+      function processAndRender() {
+        const text = state.rawText;
+        const matches = scanText(text);
+        state.currentMatches = matches;
+
+        // Track per-detector hit counts
+        const countsByDetector = new Map();
+        for (const m of matches) {
+          countsByDetector.set(m.detectorId, (countsByDetector.get(m.detectorId) || 0) + 1);
+        }
+
+        // Update detector pill counts in UI
+        document.querySelectorAll("[data-detector-count]").forEach((el) => {
+          const id = el.getAttribute("data-detector-count");
+          const count = countsByDetector.get(id) || 0;
+          el.textContent = String(count);
+          el.classList.toggle("has-hits", count > 0);
+        });
+
+        // Build clean masked text & interactive DOM nodes
+        let maskedResult = "";
+        let lastIndex = 0;
+        let activeRedactions = 0;
+        let suppressedCount = 0;
+        const activeTokensInRun = new Set();
+
+        const frag = document.createDocumentFragment();
+
+        for (const m of matches) {
+          if (m.start > lastIndex) {
+            const plainChunk = text.slice(lastIndex, m.start);
+            maskedResult += plainChunk;
+            frag.appendChild(document.createTextNode(plainChunk));
+          }
+
+          const suppressKey = `${m.detectorId}::${m.value}`;
+          const isSuppressed = state.suppressedKeys.has(suppressKey);
+          const token = getOrCreateToken(m.tokenPrefix, m.value, m.categoryLabel);
+
+          if (isSuppressed) {
+            suppressedCount++;
+            maskedResult += m.value;
+          } else {
+            activeRedactions++;
+            activeTokensInRun.add(token);
+            maskedResult += token;
+          }
+
+          const pill = document.createElement("button");
+          pill.type = "button";
+          pill.className = "pii-mark" + (isSuppressed ? " suppressed" : "");
+          pill.setAttribute("data-suppress-key", suppressKey);
+          pill.setAttribute(
+            "title",
+            isSuppressed
+              ? `${m.categoryLabel} (Kept visible — click to redact as ${token})`
+              : `${m.categoryLabel} → ${token} (Click to keep original)`
+          );
+          pill.setAttribute("aria-pressed", String(!isSuppressed));
+
+          const valSpan = document.createElement("span");
+          valSpan.textContent = m.value;
+
+          const tagSpan = document.createElement("span");
+          tagSpan.className = "token-tag";
+          tagSpan.textContent = isSuppressed ? "KEPT" : token;
+
+          pill.appendChild(valSpan);
+          pill.appendChild(tagSpan);
+          frag.appendChild(pill);
+
+          lastIndex = m.end;
+        }
+
+        if (lastIndex < text.length) {
+          const tail = text.slice(lastIndex);
+          maskedResult += tail;
+          frag.appendChild(document.createTextNode(tail));
+        }
+
+        state.maskedText = maskedResult;
+        els.cleanMaskedOutput.value = maskedResult;
+
+        // Render Interactive Surface
+        els.interactivePreview.innerHTML = "";
+        if (!text) {
+          const hint = document.createElement("span");
+          hint.className = "empty-hint";
+          hint.textContent =
+            "Detected sensitive items will appear highlighted here with consistent placeholders like [AADHAAR_1] or [PHONE_1]. Click any highlighted pill to keep or redact it.";
+          els.interactivePreview.appendChild(hint);
+        } else {
+          els.interactivePreview.appendChild(frag);
+        }
+
+        // Render Diff View
+        renderDiffView(text, matches);
+
+        // Update Stats & Badges
+        els.statMaskedCount.textContent = String(activeRedactions);
+        els.statUniqueCount.textContent = String(activeTokensInRun.size);
+        els.statSuppressedCount.textContent = String(suppressedCount);
+        els.statCharCount.textContent = String(text.length);
+        els.activeTokenBadge.textContent = String(activeRedactions);
+
+        updateVaultUI();
+        runRestore();
+      }
+
+      function renderDiffView(originalText, matches) {
+        els.diffPreview.innerHTML = "";
+        if (!originalText) {
+          const hint = document.createElement("span");
+          hint.className = "empty-hint";
+          hint.textContent = "Paste text on the left to inspect line-by-line redaction changes.";
+          els.diffPreview.appendChild(hint);
+          return;
+        }
+
+        // Build character-level segments to split accurately across newlines
+        const segments = [];
+        let cursor = 0;
+        for (const m of matches) {
+          if (m.start > cursor) {
+            segments.push({ type: "plain", text: originalText.slice(cursor, m.start) });
+          }
+          const suppressKey = `${m.detectorId}::${m.value}`;
+          const isSuppressed = state.suppressedKeys.has(suppressKey);
+          const token = getOrCreateToken(m.tokenPrefix, m.value, m.categoryLabel);
+          if (isSuppressed) {
+            segments.push({ type: "plain", text: m.value });
+          } else {
+            segments.push({ type: "replaced", orig: m.value, token });
+          }
+          cursor = m.end;
+        }
+        if (cursor < originalText.length) {
+          segments.push({ type: "plain", text: originalText.slice(cursor) });
+        }
+
+        // Split segments into lines
+        const lines = [[]];
+        for (const seg of segments) {
+          if (seg.type === "plain") {
+            const parts = seg.text.split("\n");
+            parts.forEach((part, idx) => {
+              if (idx > 0) lines.push([]);
+              if (part.length > 0) lines[lines.length - 1].push({ type: "plain", text: part });
+            });
+          } else {
+            lines[lines.length - 1].push(seg);
+          }
+        }
+
+        const frag = document.createDocumentFragment();
+        lines.forEach((lineSegs, idx) => {
+          const hasChange = lineSegs.some((s) => s.type === "replaced");
+          const row = document.createElement("div");
+          row.className = "diff-line" + (hasChange ? " changed" : "");
+
+          const ln = document.createElement("span");
+          ln.className = "diff-ln";
+          ln.textContent = String(idx + 1);
+
+          const content = document.createElement("div");
+          if (lineSegs.length === 0) {
+            content.textContent = " ";
+          } else {
+            for (const s of lineSegs) {
+              if (s.type === "plain") {
+                content.appendChild(document.createTextNode(s.text));
+              } else {
+                const del = document.createElement("span");
+                del.className = "diff-del";
+                del.textContent = s.orig;
+
+                const arrow = document.createTextNode(" → ");
+
+                const ins = document.createElement("span");
+                ins.className = "diff-ins";
+                ins.textContent = s.token;
+
+                content.appendChild(del);
+                content.appendChild(arrow);
+                content.appendChild(ins);
+              }
+            }
+          }
+
+          row.appendChild(ln);
+          row.appendChild(content);
+          frag.appendChild(row);
+        });
+
+        els.diffPreview.appendChild(frag);
+      }
+
+      function updateVaultUI() {
+        const size = state.tokenToValue.size;
+        els.vaultSizeBadge.textContent = `${size} ${size === 1 ? "key" : "keys"}`;
+        els.restoreVaultCount.textContent = String(size);
+        els.btnToggleMapTable.textContent = `${state.showMapTable ? "Hide" : "Show"} Mapping Table (${size})`;
+
+        els.mappingTableBody.innerHTML = "";
+        if (size === 0) {
+          const tr = document.createElement("tr");
+          const td = document.createElement("td");
+          td.colSpan = 3;
+          td.style.color = "var(--muted)";
+          td.textContent = "No tokens stored in current session yet.";
+          tr.appendChild(td);
+          els.mappingTableBody.appendChild(tr);
+          return;
+        }
+
+        for (const [token, info] of state.tokenToValue.entries()) {
+          const tr = document.createElement("tr");
+
+          const tdToken = document.createElement("td");
+          tdToken.className = "mono";
+          tdToken.style.color = "var(--accent)";
+          tdToken.style.fontWeight = "700";
+          tdToken.textContent = token;
+
+          const tdCat = document.createElement("td");
+          tdCat.textContent = info.category;
+
+          const tdVal = document.createElement("td");
+          tdVal.className = "mono";
+          tdVal.textContent = info.value;
+
+          tr.appendChild(tdToken);
+          tr.appendChild(tdCat);
+          tr.appendChild(tdVal);
+          els.mappingTableBody.appendChild(tr);
+        }
+      }
+
+      function runRestore() {
+        const reply = els.aiReplyInput.value;
+        state.aiReplyText = reply;
+
+        if (!reply) {
+          state.restoredText = "";
+          els.restoredOutput.value = "";
+          els.restoreHitCount.textContent = "0";
+          els.restoreUnknownCount.textContent = "0";
+          return;
+        }
+
+        let restoredCount = 0;
+        let unknownCount = 0;
+
+        const restored = reply.replace(/\[[A-Z0-9_]+_\d+\]/g, (token) => {
+          if (state.tokenToValue.has(token)) {
+            restoredCount++;
+            return state.tokenToValue.get(token).value;
+          } else {
+            unknownCount++;
+            return token;
+          }
+        });
+
+        state.restoredText = restored;
+        els.restoredOutput.value = restored;
+        els.restoreHitCount.textContent = String(restoredCount);
+        els.restoreUnknownCount.textContent = String(unknownCount);
+      }
+
+      /* =========================================================================
+       * 7. AES-256-GCM ENCRYPTED VAULT EXPORT / IMPORT (WebCrypto API)
+       * ========================================================================= */
+
+      function bufferToBase64(buf) {
+        const bytes = new Uint8Array(buf);
+        let binary = "";
+        for (let i = 0; i < bytes.byteLength; i++) {
+          binary += String.fromCharCode(bytes[i]);
+        }
+        return btoa(binary);
+      }
+
+      function base64ToBuffer(b64) {
+        const binary = atob(b64);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) {
+          bytes[i] = binary.charCodeAt(i);
+        }
+        return bytes;
+      }
+
+      async function deriveAesKey(passphrase, salt, usages) {
+        const enc = new TextEncoder();
+        const keyMaterial = await crypto.subtle.importKey(
+          "raw",
+          enc.encode(passphrase),
+          "PBKDF2",
+          false,
+          ["deriveKey"]
+        );
+        return crypto.subtle.deriveKey(
+          {
+            name: "PBKDF2",
+            salt,
+            iterations: 250000,
+            hash: "SHA-256"
+          },
+          keyMaterial,
+          { name: "AES-GCM", length: 256 },
+          false,
+          usages
+        );
+      }
+
+      async function exportEncryptedVault(passphrase) {
+        const entries = Array.from(state.tokenToValue.entries());
+        const payload = JSON.stringify({
+          app: "MaskPrompt",
+          version: 1,
+          exportedAt: new Date().toISOString(),
+          mappings: entries
+        });
+
+        const salt = crypto.getRandomValues(new Uint8Array(16));
+        const iv = crypto.getRandomValues(new Uint8Array(12));
+        const key = await deriveAesKey(passphrase, salt, ["encrypt"]);
+        const ciphertext = await crypto.subtle.encrypt(
+          { name: "AES-GCM", iv },
+          key,
+          new TextEncoder().encode(payload)
+        );
+
+        const envelope = {
+          format: "MaskPrompt-AES-GCM-v1",
+          kdf: "PBKDF2-SHA256-250000",
+          salt: bufferToBase64(salt),
+          iv: bufferToBase64(iv),
+          ciphertext: bufferToBase64(ciphertext)
+        };
+
+        const blob = new Blob([JSON.stringify(envelope, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        const stamp = new Date().toISOString().slice(0, 10);
+        a.href = url;
+        a.download = `maskprompt-vault-${stamp}.json`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      }
+
+      async function importEncryptedVault(fileText, passphrase) {
+        const envelope = JSON.parse(fileText);
+        if (envelope.format !== "MaskPrompt-AES-GCM-v1" || !envelope.salt || !envelope.iv || !envelope.ciphertext) {
+          throw new Error("Invalid MaskPrompt encrypted vault file format.");
+        }
+
+        const salt = base64ToBuffer(envelope.salt);
+        const iv = base64ToBuffer(envelope.iv);
+        const ciphertext = base64ToBuffer(envelope.ciphertext);
+        const key = await deriveAesKey(passphrase, salt, ["decrypt"]);
+
+        const plainBuf = await crypto.subtle.decrypt(
+          { name: "AES-GCM", iv },
+          key,
+          ciphertext
+        );
+
+        const decoded = JSON.parse(new TextDecoder().decode(plainBuf));
+        if (!Array.isArray(decoded.mappings)) {
+          throw new Error("Decrypted vault payload is corrupted.");
+        }
+
+        for (const [token, info] of decoded.mappings) {
+          state.tokenToValue.set(token, info);
+          const match = /^\[([A-Z0-9_]+)_(\d+)\]$/.exec(token);
+          if (match) {
+            const prefix = match[1];
+            const num = parseInt(match[2], 10);
+            state.valueToToken.set(`${prefix}::${info.value}`, token);
+            state.prefixCounters.set(prefix, Math.max(state.prefixCounters.get(prefix) || 0, num));
+          }
+        }
+
+        updateVaultUI();
+        runRestore();
+      }
+
+      function promptPassphrase(title, desc) {
+        return new Promise((resolve) => {
+          els.cryptoDialogTitle.textContent = title;
+          els.cryptoDialogDesc.textContent = desc;
+          els.vaultPassphrase.value = "";
+
+          const cleanup = () => {
+            els.cryptoDialogForm.removeEventListener("submit", onSubmit);
+            els.btnCancelCrypto.removeEventListener("click", onCancel);
+            els.cryptoDialog.removeEventListener("cancel", onCancel);
+          };
+
+          const onSubmit = (e) => {
+            e.preventDefault();
+            const val = els.vaultPassphrase.value;
+            cleanup();
+            els.cryptoDialog.close();
+            resolve(val);
+          };
+
+          const onCancel = () => {
+            cleanup();
+            els.cryptoDialog.close();
+            resolve(null);
+          };
+
+          els.cryptoDialogForm.addEventListener("submit", onSubmit);
+          els.btnCancelCrypto.addEventListener("click", onCancel);
+          els.cryptoDialog.addEventListener("cancel", onCancel);
+
+          els.cryptoDialog.showModal();
+          els.vaultPassphrase.focus();
+        });
+      }
+
+      /* =========================================================================
+       * 8. SAMPLE DATASETS (DYNAMICALLY GENERATED VALID CHECKSUMS)
+       * ========================================================================= */
+
+      function getSampleDataset(profileKey) {
+        const fakeAadhaar1 = generateFakeValidAadhaar("47291836451");
+        const fakeAadhaar2 = generateFakeValidAadhaar("83910472615");
+        const fakeGstin = generateFakeValidGSTIN("07AABCU9603R1Z");
+
+        const samples = {
+          legal: {
+            customTerms: "Meridian Infra Pvt Ltd, Arb. Pet. 412/2026",
+            text: `IN THE HIGH COURT OF DELHI AT NEW DELHI
+Arbitration Petition No. Arb. Pet. 412/2026
+
+Petitioner: Shri Vikramaditya Rathore, Director of Meridian Infra Pvt Ltd
+Address: B-42, Defence Colony, New Delhi, PIN 110024
+Aadhaar No.: ${fakeAadhaar1} | PAN: BNZPR4821K | Voter ID: DLX1948273
+Mobile: +91 98114 72910 | Landline: 011-24338190 | Email: v.rathore@meridianinfra.in
+
+Respondent: Smt. Meenakshi Deshmukh
+DOB: 14/08/1979 | Passport: Z4829174 | Driving Licence: DL04 20120048192
+Vehicle Involved: DL-01-CA-9482 | Bank A/c No. 918010048291044 (IFSC: UTIB0000126)
+
+Summary of Dispute:
+On 12.10.2026, Meridian Infra Pvt Ltd remitted INR 18,50,000 from Account 918010048291044 to Smt. Meenakshi Deshmukh pursuant to Clause 9. Please draft a concise rejoinder highlighting limitation and arbitration maintainability.`
+          },
+          medical: {
+            customTerms: "Apex Lifecare Hospital, Ward 4B",
+            text: `DISCHARGE SUMMARY — Apex Lifecare Hospital (Ward 4B)
+Patient Name: Mrs. Kavita Subramanian | DOB: 22-03-1968
+ABHA Health ID: 91-4829-1047-3829 | UHID: APL-2026-884920
+Aadhaar: ${fakeAadhaar2} | Contact: +91 98402 61938 | Alt: 044-28194022
+Emergency Email: suresh.subramanian99@gmail.com
+Residential Address: Flat 302, Greenview Enclave, Adyar, Chennai 600020
+
+Clinical Course:
+Mrs. Kavita Subramanian presented with acute chest discomfort and uncontrolled Type-2 Diabetes Mellitus (HbA1c 9.4%). Coronary angiography ruled out obstructive CAD. Discharged on Metformin 500mg BD and Atorvastatin 20mg HS. Prepare a plain-language discharge instruction checklist for the patient.`
+          },
+          hr_finance: {
+            customTerms: "Vanguard FinServe Ltd, EMP-2026-894",
+            text: `CONFIDENTIAL PAYROLL & VENDOR KYC AUDIT — Vanguard FinServe Ltd
+Employee ID: EMP-2026-894 | Name: Mr. Siddharth Malhotra | DOB: 09 Nov 1991
+PAN: CJKPM7391L | Aadhaar: ${fakeAadhaar1}
+Salary Bank A/c: 50100394817263 | IFSC: HDFC0001204 | UPI: siddharth.m@okhdfcbank
+Mobile: 9871204918 | Personal Email: sid.malhotra91@outlook.com
+Address: Sector 56, Gurugram, Haryana 122011
+
+Vendor Disbursement Check:
+Entity GSTIN: ${fakeGstin} | Settlement IBAN: DE89 3704 0044 0532 0130 00
+Corporate Card Used: 4532 0151 1283 0366
+Draft an internal audit memo flagging TDS compliance under Section 194J and KYC completeness.`
+          },
+          developer: {
+            customTerms: "prod-payments-cluster-02",
+            text: `2026-11-25T14:52:18.402Z ERROR [prod-payments-cluster-02] Payment webhook signature verification failed
+client_ip=192.168.14.88 forwarded_for=2001:0db8:85a3:0000:0000:8a2e:0370:7334
+user_email=ananya.verma@fintechdemo.io phone=+91-9910283746
+auth_header="Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c3JfOTk4MSIsInJvbGUiOiJhZG1pbiJ9.dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
+stripe_key=sk-live-98a7sd98a7sd98a7sd98a7sd98a7sd
+callback_url=https://api.example.org/v1/webhooks/razorpay?api_key=rzp_live_83920192837465&sig=9f8e7d6c5b4a
+Analyze the root cause of the 401 failure and suggest safe structured logging improvements.`
+          }
+        };
+
+        return samples[profileKey] || samples.legal;
+      }
+
+      /* =========================================================================
+       * 9. UI INITIALIZATION & EVENT LISTENERS
+       * ========================================================================= */
+
+      function showToast(message) {
+        els.toast.textContent = message;
+        els.toast.classList.add("show");
+        clearTimeout(showToast._timer);
+        showToast._timer = setTimeout(() => {
+          els.toast.classList.remove("show");
+        }, 2600);
+      }
+
+      function renderDetectorGrid() {
+        els.detectorGrid.innerHTML = "";
+        for (const det of DETECTORS) {
+          const label = document.createElement("label");
+          label.className = "detector-item";
+
+          const left = document.createElement("span");
+          left.className = "detector-item-left";
+
+          const cb = document.createElement("input");
+          cb.type = "checkbox";
+          cb.checked = state.enabledDetectors.has(det.id);
+          cb.setAttribute("data-detector-id", det.id);
+
+          const nameSpan = document.createElement("span");
+          nameSpan.className = "detector-name";
+          nameSpan.textContent = det.label;
+          nameSpan.title = det.label;
+
+          left.appendChild(cb);
+          left.appendChild(nameSpan);
+
+          if (det.heuristic) {
+            const tag = document.createElement("span");
+            tag.className = "heuristic-tag";
+            tag.textContent = "Heuristic";
+            tag.title = "Matches titles like Mr./Dr./Adv./Shri followed by capitalized words";
+            left.appendChild(tag);
+          }
+
+          const countSpan = document.createElement("span");
+          countSpan.className = "detector-count";
+          countSpan.setAttribute("data-detector-count", det.id);
+          countSpan.textContent = "0";
+
+          label.appendChild(left);
+          label.appendChild(countSpan);
+          els.detectorGrid.appendChild(label);
+        }
+      }
+
+      function applyPreset(presetKey) {
+        state.activePreset = presetKey;
+        const ids = PRESETS[presetKey] || PRESETS.custom;
+        state.enabledDetectors = new Set(ids);
+
+        document.querySelectorAll("[data-preset]").forEach((btn) => {
+          btn.setAttribute("aria-pressed", String(btn.getAttribute("data-preset") === presetKey));
+        });
+
+        document.querySelectorAll("[data-detector-id]").forEach((cb) => {
+          cb.checked = state.enabledDetectors.has(cb.getAttribute("data-detector-id"));
+        });
+
+        processAndRender();
+      }
+
+      function switchStep(stepNum) {
+        state.activeStep = stepNum;
+        const isStep1 = stepNum === 1;
+        els.tabStep1.setAttribute("aria-selected", String(isStep1));
+        els.tabStep2.setAttribute("aria-selected", String(!isStep1));
+        els.panelStep1.classList.toggle("hidden", !isStep1);
+        els.panelStep2.classList.toggle("hidden", isStep1);
+        if (!isStep1) {
+          runRestore();
+        }
+      }
+
+      function switchViewMode(mode) {
+        state.viewMode = mode;
+        els.viewTabInteractive.setAttribute("aria-pressed", String(mode === "interactive"));
+        els.viewTabClean.setAttribute("aria-pressed", String(mode === "clean"));
+        els.viewTabDiff.setAttribute("aria-pressed", String(mode === "diff"));
+
+        els.interactivePreview.classList.toggle("hidden", mode !== "interactive");
+        els.cleanMaskedOutput.classList.toggle("hidden", mode !== "clean");
+        els.diffPreview.classList.toggle("hidden", mode !== "diff");
+      }
+
+      async function copyTextToClipboard(text, successMsg) {
+        if (!text) {
+          showToast("Nothing to copy yet.");
+          return;
+        }
+        try {
+          await navigator.clipboard.writeText(text);
+          showToast(successMsg);
+        } catch {
+          const temp = document.createElement("textarea");
+          temp.value = text;
+          document.body.appendChild(temp);
+          temp.select();
+          document.execCommand("copy");
+          temp.remove();
+          showToast(successMsg);
+        }
+      }
+
+      function handleDroppedOrSelectedFile(file) {
+        if (!file) return;
+        const allowed = /\.(txt|md|csv|json|log)$/i;
+        if (!allowed.test(file.name) && file.type && !file.type.startsWith("text/")) {
+          showToast("Please upload a .txt, .md, .csv, .json, or .log file.");
+          return;
+        }
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          state.rawText = String(ev.target.result || "");
+          els.rawInput.value = state.rawText;
+          processAndRender();
+          showToast(`Loaded ${file.name} locally.`);
+        };
+        reader.readAsText(file);
+      }
+
+      function bindEvents() {
+        // Step tabs
+        els.tabStep1.addEventListener("click", () => switchStep(1));
+        els.tabStep2.addEventListener("click", () => switchStep(2));
+
+        // Preset buttons
+        els.presetButtons.addEventListener("click", (e) => {
+          const btn = e.target.closest("[data-preset]");
+          if (!btn) return;
+          applyPreset(btn.getAttribute("data-preset"));
+        });
+
+        // Sample loaders
+        document.querySelectorAll("[data-sample]").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            const key = btn.getAttribute("data-sample");
+            const sample = getSampleDataset(key);
+            applyPreset(key);
+            state.suppressedKeys.clear();
+            state.customTermsRaw = sample.customTerms;
+            els.customTermsInput.value = sample.customTerms;
+            state.rawText = sample.text;
+            els.rawInput.value = sample.text;
+            switchStep(1);
+            processAndRender();
+            showToast("Loaded sample dataset with runtime-generated valid checksums.");
+          });
+        });
+
+        // Detector checkboxes
+        els.detectorGrid.addEventListener("change", (e) => {
+          const cb = e.target.closest("[data-detector-id]");
+          if (!cb) return;
+          const id = cb.getAttribute("data-detector-id");
+          if (cb.checked) {
+            state.enabledDetectors.add(id);
+          } else {
+            state.enabledDetectors.delete(id);
+          }
+          // Mark preset as custom if diverged
+          document.querySelectorAll("[data-preset]").forEach((btn) => {
+            btn.setAttribute("aria-pressed", String(btn.getAttribute("data-preset") === "custom"));
+          });
+          processAndRender();
+        });
+
+        els.btnSelectAllDetectors.addEventListener("click", () => {
+          applyPreset("custom");
+        });
+
+        els.btnClearDetectors.addEventListener("click", () => {
+          state.enabledDetectors.clear();
+          document.querySelectorAll("[data-detector-id]").forEach((cb) => (cb.checked = false));
+          processAndRender();
+        });
+
+        // Custom terms input
+        els.customTermsInput.addEventListener("input", (e) => {
+          state.customTermsRaw = e.target.value;
+          processAndRender();
+        });
+
+        // Raw input textarea
+        els.rawInput.addEventListener("input", (e) => {
+          state.rawText = e.target.value;
+          processAndRender();
+        });
+
+        // Interactive preview click-to-toggle individual redactions
+        els.interactivePreview.addEventListener("click", (e) => {
+          const pill = e.target.closest("[data-suppress-key]");
+          if (!pill) return;
+          const key = pill.getAttribute("data-suppress-key");
+          if (state.suppressedKeys.has(key)) {
+            state.suppressedKeys.delete(key);
+          } else {
+            state.suppressedKeys.add(key);
+          }
+          processAndRender();
+        });
+
+        els.btnResetSuppressed.addEventListener("click", () => {
+          if (state.suppressedKeys.size === 0) return;
+          state.suppressedKeys.clear();
+          processAndRender();
+          showToast("All suppressed matches re-enabled.");
+        });
+
+        // Output view tabs
+        els.viewTabInteractive.addEventListener("click", () => switchViewMode("interactive"));
+        els.viewTabClean.addEventListener("click", () => switchViewMode("clean"));
+        els.viewTabDiff.addEventListener("click", () => switchViewMode("diff"));
+
+        // File upload & Drag-and-Drop
+        els.btnUploadFile.addEventListener("click", () => els.fileUploadInput.click());
+        els.fileUploadInput.addEventListener("change", (e) => {
+          handleDroppedOrSelectedFile(e.target.files[0]);
+          e.target.value = "";
+        });
+
+        els.inputDropzone.addEventListener("dragover", (e) => {
+          e.preventDefault();
+          els.inputDropzone.classList.add("drag-over");
+        });
+        els.inputDropzone.addEventListener("dragleave", () => {
+          els.inputDropzone.classList.remove("drag-over");
+        });
+        els.inputDropzone.addEventListener("drop", (e) => {
+          e.preventDefault();
+          els.inputDropzone.classList.remove("drag-over");
+          if (e.dataTransfer && e.dataTransfer.files.length > 0) {
+            handleDroppedOrSelectedFile(e.dataTransfer.files[0]);
+          }
+        });
+
+        // Clear & Copy actions
+        els.btnClearInput.addEventListener("click", () => {
+          state.rawText = "";
+          els.rawInput.value = "";
+          state.suppressedKeys.clear();
+          processAndRender();
+        });
+
+        els.btnCopyMasked.addEventListener("click", () => {
+          copyTextToClipboard(state.maskedText, "Masked prompt copied to clipboard.");
+        });
+
+        // Step 2 Restore actions
+        els.aiReplyInput.addEventListener("input", runRestore);
+
+        els.btnClearAiReply.addEventListener("click", () => {
+          els.aiReplyInput.value = "";
+          runRestore();
+        });
+
+        els.btnCopyRestored.addEventListener("click", () => {
+          copyTextToClipboard(state.restoredText, "Restored AI response copied to clipboard.");
+        });
+
+        els.btnLoadSampleReply.addEventListener("click", () => {
+          if (state.tokenToValue.size === 0) {
+            const sample = getSampleDataset("legal");
+            applyPreset("legal");
+            state.customTermsRaw = sample.customTerms;
+            els.customTermsInput.value = sample.customTerms;
+            state.rawText = sample.text;
+            els.rawInput.value = sample.text;
+            processAndRender();
+          }
+          const tokens = Array.from(state.tokenToValue.keys());
+          const t1 = tokens[0] || "[CUSTOM_1]";
+          const t2 = tokens[1] || "[PERSON_1]";
+          const t3 = tokens[2] || "[AADHAAR_1]";
+          const t4 = tokens[3] || "[BANK_AC_1]";
+          els.aiReplyInput.value = `Draft Rejoinder Note:\n\n1. The Petitioner ${t2} (Aadhaar: ${t3}), acting on behalf of ${t1}, initiated proceedings within the statutory limitation window.\n2. Disbursement records from account ${t4} establish clear commercial consideration and an active arbitration clause.\n3. Accordingly, the objections raised by the Respondent lack merit and ought to be dismissed.`;
+          runRestore();
+          showToast("Sample AI reply inserted and restored.");
+        });
+
+        // Vault Table Toggle & Wipe
+        els.btnToggleMapTable.addEventListener("click", () => {
+          state.showMapTable = !state.showMapTable;
+          els.mappingTableContainer.classList.toggle("hidden", !state.showMapTable);
+          updateVaultUI();
+        });
+
+        els.btnWipeVault.addEventListener("click", () => {
+          state.valueToToken.clear();
+          state.tokenToValue.clear();
+          state.prefixCounters.clear();
+          state.suppressedKeys.clear();
+          processAndRender();
+          showToast("Session mapping wiped from memory.");
+        });
+
+        // Encrypted Vault Export
+        els.btnExportVault.addEventListener("click", async () => {
+          if (state.tokenToValue.size === 0) {
+            showToast("Mask some text first so there is a mapping to export.");
+            return;
+          }
+          const pass = await promptPassphrase(
+            "Export Encrypted Vault (.json)",
+            "Choose a passphrase to encrypt your placeholder-to-value mapping with AES-256-GCM."
+          );
+          if (!pass) return;
+          try {
+            await exportEncryptedVault(pass);
+            showToast("Encrypted mapping exported.");
+          } catch (err) {
+            showToast("Encryption failed: " + err.message);
+          }
+        });
+
+        // Encrypted Vault Import
+        els.btnImportVault.addEventListener("click", () => {
+          els.vaultImportInput.click();
+        });
+
+        els.vaultImportInput.addEventListener("change", (e) => {
+          const file = e.target.files[0];
+          e.target.value = "";
+          if (!file) return;
+          const reader = new FileReader();
+          reader.onload = async (ev) => {
+            const rawJson = String(ev.target.result || "");
+            const pass = await promptPassphrase(
+              "Decrypt Mapping Vault (.json)",
+              "Enter the passphrase used when exporting this encrypted mapping file."
+            );
+            if (!pass) return;
+            try {
+              await importEncryptedVault(rawJson, pass);
+              showToast(`Imported ${state.tokenToValue.size} mapping keys into session.`);
+            } catch {
+              showToast("Decryption failed. Check your passphrase or file integrity.");
+            }
+          };
+          reader.readAsText(file);
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener("keydown", (e) => {
+          if (e.altKey && e.key === "1") {
+            e.preventDefault();
+            switchStep(1);
+          } else if (e.altKey && e.key === "2") {
+            e.preventDefault();
+            switchStep(2);
+          } else if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === "c") {
+            e.preventDefault();
+            if (state.activeStep === 1) {
+              copyTextToClipboard(state.maskedText, "Masked prompt copied to clipboard.");
+            } else {
+              copyTextToClipboard(state.restoredText, "Restored AI response copied to clipboard.");
+            }
+          }
+        });
+      }
+
+      // Bootstrap application
+      renderDetectorGrid();
+      bindEvents();
+      processAndRender();
+    })();
+  </script>
+</body>
+</html>
